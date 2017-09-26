@@ -26,7 +26,7 @@ func consume(scids chan string) {
 }
 
 //生产者线程函数
-func produce(uids chan string, scids chan string) {
+func produce(uids chan string, scids chan string, finish chan bool) {
 	defer wg.Done()
 	for uid := range uids {
 		url := "http://www.miaopai.com/gu/u?fen_type=channel&suid=" + uid
@@ -39,7 +39,7 @@ func produce(uids chan string, scids chan string) {
 			scids <- scid
 		}
 	}
-	close(scids)
+	finish <- true
 }
 
 func getBody(url string) string {
@@ -61,15 +61,17 @@ func getBody(url string) string {
 
 func main() {
 	scids := make(chan string)
+	finish := make(chan bool)
+
 	//消费者数量
 	n := 10
 	//生产者数量
-	m := 1
+	m := 3
 	wg.Add(n + m)
 
 	uids := make(chan string)
 	for i := 0; i < m; i++ {
-		go produce(uids, scids)
+		go produce(uids, scids, finish)
 	}
 
 	for i := 0; i < n; i++ {
@@ -89,6 +91,13 @@ func main() {
 	}
 
 	close(uids)
+	//wait for all producers to finish
+	produce_num := 0
+	for produce_num < m {
+		<-finish
+		produce_num++
+	}
+	close(scids)
 
 	wg.Wait()
 

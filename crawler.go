@@ -68,7 +68,7 @@ func main() {
 	//生产者数量
 	m := 3
 	wg.Add(n + m)
-
+	//关注的用户通道
 	uids := make(chan string)
 	for i := 0; i < m; i++ {
 		go produce(uids, scids, finish)
@@ -89,8 +89,8 @@ func main() {
 		fmt.Println(uid)
 		uids <- uid
 	}
-
 	close(uids)
+
 	//wait for all producers to finish
 	produce_num := 0
 	for produce_num < m {

@@ -78,16 +78,25 @@ func main() {
 		go consume(scids)
 	}
 
-	res := getBody("http://www.miaopai.com/gu/follow?suid=" + ADMIN_USER_ID)
-	if res == "" {
-		return
-	}
-	match := regexp.MustCompile(`suid=\\"([\S]+)\\"`)
-	for _, uid := range match.FindAllString(res, -1) {
-		temps := strings.Split(uid, "\"")
-		uid = strings.Trim(temps[1], "\\")
-		fmt.Println(uid)
-		uids <- uid
+	queue := make([]string, 1)
+	queue = append(queue, ADMIN_USER_ID)
+	total := 1
+	for len(queue) > 0 && total < 5 {
+		res := getBody("http://www.miaopai.com/gu/follow?suid=" + queue[0])
+		queue = queue[1:]
+		total++
+		if res == "" {
+			fmt.Println("res=", res)
+			return
+		}
+		match := regexp.MustCompile(`suid=\\"([\S]+)\\"`)
+		for _, uid := range match.FindAllString(res, -1) {
+			temps := strings.Split(uid, "\"")
+			uid = strings.Trim(temps[1], "\\")
+			fmt.Println(uid)
+			uids <- uid
+			queue = append(queue, uid)
+		}
 	}
 	close(uids)
 

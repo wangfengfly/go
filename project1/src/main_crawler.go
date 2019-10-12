@@ -12,14 +12,14 @@ import (
 
 var wg sync.WaitGroup
 
-const ADMIN_USER_ID = "QGVbe7gWfyLfb046Xntz0Q__"
+const ADMIN_USER_ID = "y8ST4JmXEzqgM0asXGcypA__"
 
 //消费者线程函数
 func consume(scids chan string) {
 	defer wg.Done()
 	for scid := range scids {
 		url := "http://api.miaopai.com/m/v2_channel.json?fillType=259&scid=" + scid
-		res := getBody(url)
+		res,_ := getBody(url)
 		fmt.Println(res)
 	}
 
@@ -30,7 +30,7 @@ func produce(uids chan string, scids chan string, finish chan bool) {
 	defer wg.Done()
 	for uid := range uids {
 		url := "http://www.miaopai.com/gu/u?fen_type=channel&suid=" + uid
-		res := getBody(url)
+		res,_ := getBody(url)
 		match := regexp.MustCompile(`data-scid=\\"([\S]+)\\"`)
 		for _, scid := range match.FindAllString(res, -1) {
 			temps := strings.Split(scid, "\"")
@@ -42,20 +42,20 @@ func produce(uids chan string, scids chan string, finish chan bool) {
 	finish <- true
 }
 
-func getBody(url string) string {
+func getBody(url string) (string,bool) {
 	response, err := http.Get(url)
 	if err != nil {
 		fmt.Println(err)
-		return ""
+		return "",false
 	} else {
 		defer response.Body.Close()
 		body, err := ioutil.ReadAll(response.Body)
 		if err != nil {
 			fmt.Println(err)
-			return ""
+			return "",false
 		}
 		res := string(body)
-		return res
+		return res,true
 	}
 }
 
@@ -82,13 +82,14 @@ func main() {
 	queue = append(queue, ADMIN_USER_ID)
 	total := 1
 	for len(queue) > 0 && total < 5 {
-		res := getBody("http://www.miaopai.com/gu/follow?suid=" + queue[0])
+		res,success := getBody("http://www.miaopai.com/gu/follow?suid=" + queue[0])
 		queue = queue[1:]
-		total++
-		if res == "" {
+		if success == false {
 			fmt.Println("res=", res)
-			return
+			continue
 		}
+
+		total++
 		match := regexp.MustCompile(`suid=\\"([\S]+)\\"`)
 		for _, uid := range match.FindAllString(res, -1) {
 			temps := strings.Split(uid, "\"")
@@ -100,7 +101,7 @@ func main() {
 	}
 	close(uids)
 
-	//等待所有协程结束
+	//等待生产者线程结束
 	produce_num := 0
 	for produce_num < m {
 		<-finish

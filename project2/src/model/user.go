@@ -1,9 +1,8 @@
 package model
 
 import (
-	"database/sql"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
+	"mysqldb"
 )
 
 type User struct {
@@ -11,13 +10,9 @@ type User struct {
 	Account string
 }
 
-func (user *User) getDB() (*sql.DB, error) {
-	db, err := sql.Open("mysql", "dhuser:test@tcp(10.139.22.181)/testdb")
-	return db, err
-}
 
 func (user *User) GetById(id int) bool {
-	db,err := user.getDB()
+	db,err := mysqldb.GetDB()
 	if err != nil {
 		fmt.Println("getDB fail."+err.Error())
 		return false
